@@ -1,0 +1,76 @@
+﻿
+@{
+    ViewData["Title"] = "Survey";
+}
+
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+
+@functions
+{
+    public string GetAntiXsrfRequestToken()
+    {
+        return Xsrf.GetAndStoreTokens(Context).RequestToken;
+    }
+}
+
+<h1>Survey</h1>
+
+<div id="surveyElement" style="display:inline-block;width:100%;">
+    <survey :survey='survey' />
+</div>
+<div id="surveyResult"></div>
+
+@section CSS {
+    <link rel="stylesheet" href="~/lib/survey/survey.min.css" />
+}
+
+@section Scripts {
+    <script src="~/lib/vue/vue.min.js"></script>
+    <script src="~/lib/survey/survey.vue.min.js"></script>
+
+    <script>
+        fetch("/sample-data/survey.json")
+            .then(response => response.json())
+            .then(json => {
+                survey = new Survey.Model(json);
+
+                let myCss = {
+                    navigationButton: "btn btn-primary",
+                    html: "sq-html"
+                };
+
+                survey.cssType = "bootstrap";
+                survey.css = myCss;
+
+                survey
+                    .onComplete
+                    .add(function (result) {
+
+                        let dataType = 'application/json; charset=utf-8';
+                        let data = JSON.stringify(result.data, null, 3);
+
+                        $.ajax({
+                            type: "POST",
+                            url: "@Url.Action("Survey")",
+                            headers: {"RequestVerificationToken": '@GetAntiXsrfRequestToken()' },
+                            dataType: 'json',
+                            contentType: dataType,
+                            data: data,
+                            success: function (msg) {
+                                console.log(msg);
+                            },
+                            error: function (req, status, error) {
+                                alert(error);
+                            }
+                        });
+                    });
+
+                let app = new Vue({
+                    el: `#surveyElement`,
+                    data: {
+                        survey: survey
+                    }
+                });
+            });
+    </script>
+}
